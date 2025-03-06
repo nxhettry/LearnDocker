@@ -10,19 +10,28 @@ const app = express();
 const port = 3000;
 
 // MongoDB connection URL (using Docker container name)
-const mongoUrl = "mongodb://mongodb:27017";
+
+const mongoUrl = "mongodb://admin:password@mongo:27017/";
 const dbName = "studentDB";
 let db;
 
-// Connect to MongoDB
-MongoClient.connect(mongoUrl)
-  .then((client) => {
-    console.log("Connected to MongoDB");
+async function connectToMongo() {
+  try {
+    console.log("Attempting to connect to MongoDB...");
+    const client = await MongoClient.connect(mongoUrl);
+
+    console.log("Successfully connected to MongoDB");
     db = client.db(dbName);
-  })
-  .catch((err) => {
-    console.error("Failed to connect to MongoDB:", err);
-  });
+
+    const collections = await db.listCollections().toArray();
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  }
+}
+
+// Call the connection function
+connectToMongo();
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, "public")));
@@ -48,6 +57,7 @@ app.post("/api/students", async (req, res) => {
 app.get("/api/students", async (req, res) => {
   try {
     const students = await db.collection("students").find({}).toArray();
+
     res.json(students);
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
